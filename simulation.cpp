@@ -28,7 +28,7 @@ double cost(double size, double transfer){
 }
 
 double type_var, transfer_var, opportunity_var, sizeLP_var;
-int NMax, Nlp;
+int NMax, Nlp, months, month_length;
 int i,j;
 const int Npools = 1000;
 const int Ncurrencies = 100;
@@ -40,18 +40,19 @@ pool pools[Npools];
 int n_pools, n_currencies;
 double averageArrival; 
 double lambda;
-vector <LP> LP_sets; 
+vector <LP> LP_sets[Npools];
+int pools_initial[Npools]; 
 
-int find_best_pool(user usr){
+int usr_best_pool(user usr){
 	return 0;
 }
 
-int find_best_pool(LP nLP){
+int LP_best_pool(LP nLP){
 	return 0;
 }
 
 
-void pool_currency_init(){
+void pool_currency_init(){//initialize number of pools and pool currencies
 	n_pools	= 5;
 	pools[0].currency = 0;
 	pools[1].currency = 0;
@@ -61,15 +62,34 @@ void pool_currency_init(){
 	return;
 }
 
-void pool_sizes_init(){
+void pool_sizes_init(){//initialize pool sizes 
 	pools[0].size = 10000000;
 	pools[1].size = 1000000;
-	pools[2].currency = 1000000;
-	pools[3].currency = 500000;
-	pools[4].currency = 300000;	
+	pools[2].size = 1000000;
+	pools[3].size = 500000;
+	pools[4].size = 300000;	
+	return;
 }
 
-void initialization(){
+void pool_initial_members(){//initialize the decomposition of initial pools into LP's 
+	for (i = 0; i < n_pools; i++){
+		pools_initial[i] = 10;
+	}
+	for (i = 0; i < n_pools; i++){
+		for (j = 0; j < pools_initial[i]; j++){
+			LP cur;
+			cur.entry_time = 0;
+			cur.size_lp = pools[i].size / pools_initial[i];
+			cur.opport_cost = 0.05;
+			cur.pool_label = i;	 
+			cur.currency = pools[i].currency;
+			LP_sets[i].push_back(cur);
+		}
+	}
+	return;	
+}
+
+void initialization(){//initialize pools and parameters
 	pool_currency_init();
 	
 	pool_sizes_init();
@@ -78,7 +98,7 @@ void initialization(){
 		pools[i].label = i;
 	}
 
-	for (i = 0; i < n_pools;)
+	pool_initial_members();
 
 	NMax = 1000000;
 	Nlp  = 1000;
@@ -141,7 +161,7 @@ int main (){
 	exponential_distribution<double> exp (lambda);
 	double sumArrivalTimes=0;
 	double newArrivalTime;
-
+	months = 1;
 	for (int i = 0; i < 10; i++){
 		newArrivalTime=  exp.operator() (rng);// generates the next random number in the distribution 
 		sumArrivalTimes  = sumArrivalTimes + newArrivalTime;  
@@ -158,6 +178,8 @@ int main (){
 					nLP->currency = i;
 					break;
 				}
+			int ind_pool = LP_best_pool(*nLP);
+			//add nLP to the pool indexed ind_pool and update it
 			
 		} else{//here we generate user
 			user *usr = new user();
@@ -169,7 +191,13 @@ int main (){
 				if (cur_cap[i] > cur_gen){
 					usr->currency = i;
 					break;
-				}		
+				}
+			int ind_pool = usr_best_pool(*usr);
+			//in the pool ind_pool update all LP's incomes
+					
+		}
+		if (sumArrivalTimes > months * month_length){//we check for all LP's if they want to leave and update pools
+			months++;		
 		}
 	}
 	return 0;
