@@ -19,6 +19,7 @@ struct LP{
 	double entry_time;
 	double size_lp;
 	double opport_cost;
+	double gains;
 	int pool_label; 
 	int currency;
 };
@@ -44,7 +45,18 @@ vector <LP> LP_sets[Npools];
 int pools_initial[Npools]; 
 
 int usr_best_pool(user usr){
-	return 0;
+	int i, ans;
+	double min_loss = 1000.0;
+	for (i = 0; i < n_pools; i++){
+		double cur_loss = 1.0;
+		if (usr.currency != pools[i].currency) cur_loss *= c[usr.currency][pools[i].currency];
+		cur_loss *= (1.0 + cost(pools[i].size, usr.transfer));
+		if (min_loss > cur_loss){
+			ans = i;
+			min_loss = cur_loss; 	
+		}
+	}
+	return ans;
 }
 
 int LP_best_pool(LP nLP){
@@ -172,6 +184,7 @@ int main (){
 			nLP->entry_time = sumArrivalTimes;
 			nLP->size_lp = fabs(distr_sizeLP(generator));
 			nLP->opport_cost = fabs(distr_opportunity(generator));
+			nLP->gains = 0;
 			int cur_gen = rand() % NMax;
 			for (i = 0; i < Ncurrencies; i++)
 				if (cur_cap[i] > cur_gen){
@@ -180,6 +193,9 @@ int main (){
 				}
 			int ind_pool = LP_best_pool(*nLP);
 			//add nLP to the pool indexed ind_pool and update it
+			LP_sets[ind_pool].push_back(*nLP);
+			pools[ind_pool].size += nLP->size_lp;
+			nLP->pool_label = ind_pool;
 			
 		} else{//here we generate user
 			user *usr = new user();
@@ -187,13 +203,18 @@ int main (){
 			usr->transfer = fabs(distr_transfer(generator));
 			usr->priv_parameter = fabs(distr_type(generator));
 			int cur_gen = rand() % NMax;
-			for (i = 0; i < Ncurrencies; i++)
-				if (cur_cap[i] > cur_gen){
-					usr->currency = i;
+			for (int j = 0; j < Ncurrencies; j++){//here we generate currency
+				if (cur_cap[j] > cur_gen){
+					usr->currency = j;
 					break;
 				}
+			}
 			int ind_pool = usr_best_pool(*usr);
 			//in the pool ind_pool update all LP's incomes
+			for (int j = 0; j < LP_sets[ind_pool].size(); j++){
+				//we assume proportional distribution of gains, some other function can also be considered
+				LP_sets[ind_pool][j].gains += usr->transfer * cost(pools[ind_pool].size, LP_sets[ind_pool][j].size_lp) * LP_sets[ind_pool][j].size_lp / pools[ind_pool].size; 
+			}
 					
 		}
 		if (sumArrivalTimes > months * month_length){//we check for all LP's if they want to leave and update pools
