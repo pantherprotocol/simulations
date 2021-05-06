@@ -13,6 +13,7 @@ struct pool{
 	double size;
 	int currency;
 	int label;
+	double avg_gains;
 };
 
 struct LP{
@@ -60,7 +61,18 @@ int usr_best_pool(user usr){
 }
 
 int LP_best_pool(LP nLP){
-	return 0;
+	int i, ans;
+	double min_loss = 1000.0;
+	for (i = 0; i < n_pools; i++){
+		double cur_loss = 1.0;
+		if (nLP.currency != pools[i].currency) cur_loss *= c[nLP.currency][pools[i].currency];
+		cur_loss *= (1.0 + pools[i].avg_gains);
+		if (min_loss > cur_loss){
+			ans = i;
+			min_loss = cur_loss; 	
+		}
+	}
+	return ans;
 }
 
 
@@ -108,6 +120,7 @@ void initialization(){//initialize pools and parameters
 
 	for (i = 0; i < n_pools; i++){
 		pools[i].label = i;
+		pools[i].avg_gains = 1.0;
 	}
 
 	pool_initial_members();
@@ -174,7 +187,7 @@ int main (){
 	double sumArrivalTimes=0;
 	double newArrivalTime;
 	months = 1;
-	for (int i = 0; i < 10; i++){
+	for (int i = 0; i < 1000000; i++){
 		newArrivalTime=  exp.operator() (rng);// generates the next random number in the distribution 
 		sumArrivalTimes  = sumArrivalTimes + newArrivalTime;  
 		cout << sumArrivalTimes << endl;
@@ -217,8 +230,26 @@ int main (){
 			}
 					
 		}
-		if (sumArrivalTimes > months * month_length){//we check for all LP's if they want to leave and update pools
-			months++;		
+		if (sumArrivalTimes > months * month_length){//we check for all LP's if they want to leave and update pools, also average monthly gains
+			months++;
+			for (int i = 0; i < n_pools; i++){
+				double avg_monthly_gains = 1.0;
+				int activeLPs = 0;
+				for (int j = 0; j < n_pools; j++){
+					if (LP_sets[i][j].pool_label >= 0){
+						LP cur = LP_sets[i][j];
+						if (cur.gains < cur.size_lp * cur.opport_cost){//LP wants to leave and pool is resized
+							pools[cur.pool_label].size -= cur.size_lp;
+							cur.pool_label = -1;
+						}
+						avg_monthly_gains *= (1.0 + cur.gains);
+						activeLPs++;
+						cur.gains = 0;
+						LP_sets[i][j] = cur;
+					}
+				}
+				pools[i].avg_gains = pow(avg_monthly_gains, activeLPs);
+			}		
 		}
 	}
 	return 0;
