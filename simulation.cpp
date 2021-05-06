@@ -248,7 +248,7 @@ int main (){
 						LP_sets[i][j] = cur;
 					}
 				}
-				pools[i].avg_gains = pow(avg_monthly_gains, activeLPs);
+				pools[i].avg_gains = pow(avg_monthly_gains, 1.0 / activeLPs);
 			}		
 		}
 	}
