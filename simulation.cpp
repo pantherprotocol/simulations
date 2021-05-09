@@ -113,26 +113,7 @@ void pool_initial_members(){//initialize the decomposition of initial pools into
 	return;	
 }
 
-void initialization(){//initialize pools and parameters
-	pool_currency_init();
-	
-	pool_sizes_init();
-
-	for (i = 0; i < n_pools; i++){
-		pools[i].label = i;
-		pools[i].avg_gains = 1.0;
-	}
-
-	pool_initial_members();
-
-	NMax = 1000000;
-	Nlp  = 1000;
-
-	n_currencies = pools[n_pools - 1].currency + 1;
-	cur_cap[0] = 500000;
-	cur_cap[1] = 800000;
-	cur_cap[2] = NMax;
-
+void init_trans_coefficients(){
 	for (i = 0; i < n_currencies; i++){
 		for (j = 0; j < n_currencies; j++){
 			if (i != j){
@@ -154,7 +135,10 @@ void initialization(){//initialize pools and parameters
 			}
 		}
 	}
-	
+	return;
+}
+
+void init_meta_parameters(){
 	type_var = 1.0;
 	transfer_var = 1000;
 	opportunity_var = 0.1;
@@ -162,6 +146,32 @@ void initialization(){//initialize pools and parameters
 
 	averageArrival = 1.5;
 	lambda = 1 / averageArrival;
+	return;
+}
+
+void initialization(){//initialize pools and parameters
+	pool_currency_init();
+	
+	pool_sizes_init();
+
+	for (i = 0; i < n_pools; i++){
+		pools[i].label = i;
+		pools[i].avg_gains = 1.0;
+	}
+
+	pool_initial_members();
+
+	NMax = 1000000;
+	Nlp  = 1000;
+
+	init_trans_coefficients();
+	init_meta_parameters();
+
+	n_currencies = pools[n_pools - 1].currency + 1;
+
+	cur_cap[0] = 500000;
+	cur_cap[1] = 800000;
+	cur_cap[2] = NMax;
 	
 	return;
 }
@@ -190,7 +200,7 @@ int main (){
 	for (int i = 0; i < 1000000; i++){
 		newArrivalTime=  exp.operator() (rng);// generates the next random number in the distribution 
 		sumArrivalTimes  = sumArrivalTimes + newArrivalTime;  
-		cout << sumArrivalTimes << endl;
+		//cout << sumArrivalTimes << endl;
 		int gen = rand() % NMax;
 		if (gen < Nlp){//here we generate an LP
 			LP *nLP = new LP();
@@ -249,7 +259,9 @@ int main (){
 					}
 				}
 				pools[i].avg_gains = pow(avg_monthly_gains, 1.0 / activeLPs);
+				cout << pools[i].size << " " << pools[i].avg_gains << "     ";
 			}		
+			cout << "\n";
 		}
 	}
 	return 0;
